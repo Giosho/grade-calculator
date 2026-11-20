@@ -22,9 +22,10 @@ namespace GradeCalc
     class ShkoloForm : Form
     {
         const string ExtractJs = @"(function(){
-  var G=/^(?:(?:Слаб|Среден|Добър|Мн\.?\s*добър|Отличен)\s*)?\(?([2-6](?:[.,][0-9]+)?)\)?$/i;
-  var M=/^[2-6](?:[.,][0-9]+)?(?:[\s,;]+[2-6](?:[.,][0-9]+)?)+$/;
+  var G=/^(?:(?:Слаб|Среден|Добър|Мн\.?\s*добър|Отличен)\s*)?\(?([2-6])\)?$/i;
+  var M=/^[2-6](?:[\s,;]+[2-6])+$/;
   var HAS=/[A-Za-zА-Яа-я]{3,}/;
+  var SKIP=/общ|среден|годишен|срок|успех|average|total/i;
   var out=[];
   var rows=document.querySelectorAll('tr');
   for(var i=0;i<rows.length;i++){
@@ -37,14 +38,14 @@ namespace GradeCalc
       else if(M.test(t)){var p=t.split(/[\s,;]+/);for(var k=0;k<p.length;k++)gr.push(p[k]);}
       else if(!subj && HAS.test(t) && t.length<70 && !/^\d/.test(t)){subj=t.split('\n')[0].trim();}
     }
-    if(subj&&gr.length>0) out.push(subj+'\t'+gr.join(' '));
+    if(subj&&gr.length>0&&!SKIP.test(subj)) out.push(subj+'\t'+gr.join(' '));
   }
   if(out.length==0){
     var lines=(document.body.innerText||'').split('\n');
-    var R=/^(.*[A-Za-zА-Яа-я]{3,}.*?)[\s:–-]+((?:[2-6](?:[.,][0-9]+)?[\s,;]*)+)$/;
+    var R=/^(.*[A-Za-zА-Яа-я]{3,}.*?)[\s:–-]+((?:[2-6][\s,;]*)+)$/;
     for(var i=0;i<lines.length;i++){
       var m2=R.exec(lines[i].trim());
-      if(m2) out.push(m2[1].trim()+'\t'+m2[2].trim().replace(/[,;]+/g,' '));
+      if(m2 && !SKIP.test(m2[1])) out.push(m2[1].trim()+'\t'+m2[2].trim().replace(/[,;]+/g,' '));
     }
   }
   return out.join('\n');
