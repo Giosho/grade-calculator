@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="bg" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Калкулатор за оценки</title>
+<meta name="description" content="Колко шестици или петици ти трябват, за да стигнеш желания успех? Калкулатор за ученически оценки.">
+<meta name="theme-color" content="#fafcff">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/icon-32.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="preload" href="fonts/Caveat.ttf" as="font" type="font/ttf" crossorigin>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="sheet">
+  <nav class="tabs" role="tablist" aria-label="Раздели">
+    <button role="tab" id="t-calc" aria-controls="tab-calc" aria-selected="true">Калкулатор</button>
+    <button role="tab" id="t-subj" aria-controls="tab-subj" aria-selected="false" tabindex="-1">Предмети</button>
+    <button role="tab" id="t-stats" aria-controls="tab-stats" aria-selected="false" tabindex="-1">Статистика</button>
+    <button role="tab" id="t-set" aria-controls="tab-set" aria-selected="false" tabindex="-1">Настройки</button>
+  </nav>
+
+  <main>
+    <!-- КАЛКУЛАТОР -->
+    <section id="tab-calc" class="page" role="tabpanel" aria-labelledby="t-calc">
+      <header class="title">
+        <h1>Калкулатор за оценки</h1>
+        <p>Колко шестици или петици ти трябват, за да стигнеш целта?</p>
+      </header>
+
+      <label for="in-grades">Твоите оценки</label>
+      <input id="in-grades" class="ink" type="text" inputmode="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="напр.  6 5 5 4 6">
+
+      <label>…или ако знаеш само успеха си</label>
+      <div class="two">
+        <input id="in-avg" class="ink" type="text" inputmode="decimal" autocomplete="off" placeholder="сегашен успех, напр. 5.20" aria-label="Сегашен успех">
+        <input id="in-count" class="ink" type="text" inputmode="numeric" autocomplete="off" placeholder="брой оценки" aria-label="Брой оценки">
+      </div>
+
+      <label for="in-target">Какъв успех искаш да стигнеш</label>
+      <div class="target">
+        <input id="in-target" class="ink short" type="text" inputmode="decimal" autocomplete="off" value="5.50">
+        <div id="presets" class="chips" role="group" aria-label="Бързи цели"></div>
+        <button id="clear" class="link" type="button">Изчисти</button>
+      </div>
+
+      <div id="summary" class="summary" aria-live="polite"></div>
+      <ol id="results" class="rows"></ol>
+    </section>
+
+    <!-- ПРЕДМЕТИ -->
+    <section id="tab-subj" class="page" role="tabpanel" aria-labelledby="t-subj" hidden>
+      <header class="title">
+        <h1>Предмети</h1>
+        <p>Оценките ти по предмети. Запазват се в този браузър.</p>
+      </header>
+      <div id="overall" class="overall"></div>
+      <div id="subj-list" class="subj-list"></div>
+      <div class="actions">
+        <button id="add-subj" class="chip primary" type="button">+ Добави предмет</button>
+        <button id="open-import" class="chip" type="button">Постави от Школо</button>
+        <button id="all-to-calc" class="chip" type="button">Всички оценки → калкулатор</button>
+      </div>
+    </section>
+
+    <!-- СТАТИСТИКА -->
+    <section id="tab-stats" class="page" role="tabpanel" aria-labelledby="t-stats" hidden>
+      <header class="title">
+        <h1>Статистика</h1>
+        <p>Къде си силен и какво да поправиш първо.</p>
+      </header>
+      <div id="stats"></div>
+    </section>
+
+    <!-- НАСТРОЙКИ -->
+    <section id="tab-set" class="page" role="tabpanel" aria-labelledby="t-set" hidden>
+      <header class="title">
+        <h1>Настройки</h1>
+        <p>Тема, цел по подразбиране и инсталиране.</p>
+      </header>
+
+      <label>Тема</label>
+      <div id="theme-chips" class="chips" role="group" aria-label="Тема"></div>
+
+      <label for="in-goal">Цел по подразбиране</label>
+      <input id="in-goal" class="ink short" type="text" inputmode="decimal" autocomplete="off" placeholder="5.50">
+
+      <label>Инсталиране</label>
+      <div id="install-box">
+        <button id="install" class="chip primary" type="button" hidden>Инсталирай приложението</button>
+        <p id="install-hint" class="hint"></p>
+      </div>
+
+      <label>Данни</label>
+      <p class="hint">Оценките се пазят само в този браузър, на това устройство. Никъде не се изпращат.</p>
+      <button id="wipe" class="link danger" type="button">Изтрий всички предмети</button>
+    </section>
+  </main>
+</div>
+
+<dialog id="dlg-import" aria-labelledby="dlg-title">
+  <form method="dialog" class="dlg">
+    <h2 id="dlg-title">Постави от Школо</h2>
+    <ol class="steps">
+      <li>Отвори страницата с оценките си в Школо.</li>
+      <li>Натисни <kbd>Ctrl</kbd>+<kbd>A</kbd>, после <kbd>Ctrl</kbd>+<kbd>C</kbd>. На телефон избери целия текст и го копирай.</li>
+      <li>Постави го тук.</li>
+    </ol>
+    <textarea id="import-text" rows="8" placeholder="Постави копирания текст тук" aria-label="Копиран текст от Школо"></textarea>
+    <p id="import-msg" class="hint" aria-live="polite"></p>
+    <div class="actions">
+      <button id="import-ok" class="chip primary" type="button" disabled>Добави в Предмети</button>
+      <button class="chip" value="cancel">Затвори</button>
+    </div>
+  </form>
+</dialog>
+
+<script src="app.js"></script>
+</body>
+</html>
