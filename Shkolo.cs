@@ -21,33 +21,47 @@ namespace GradeCalc
     // вграден браузър (WebView2) – влизаш сам в Школо, а приложението чете оценките от страницата
     class ShkoloForm : Form
     {
+        // Таблицата на Школо: № | Предмет | Текущи | Срочна | ... | Годишна, най-долу ред "Средноаритметично".
+        // Взимаме оценките само от колоните "Текущи" (по позиция на заглавията), без номера на редовете и без средните.
         const string ExtractJs = @"(function(){
-  var G=/^(?:(?:Слаб|Среден|Добър|Мн\.?\s*добър|Отличен)\s*)?\(?([2-6])\)?$/i;
-  var M=/^[2-6](?:[\s,;]+[2-6])+$/;
-  var HAS=/[A-Za-zА-Яа-я]{3,}/;
-  var SKIP=/общ|среден|годишен|срок|успех|average|total/i;
-  var out=[];
+  var out=[]; var avg='';
+  var SKIPNAME=/^(общ успех|средно|годишен|срок)/i;
+  var heads=[];
+  var all=document.querySelectorAll('th,td');
+  for(var a=0;a<all.length;a++){
+    var tt=(all[a].innerText||'').trim();
+    if(/^текущи$/i.test(tt)){var r=all[a].getBoundingClientRect(); heads.push([r.left,r.right]);}
+  }
   var rows=document.querySelectorAll('tr');
   for(var i=0;i<rows.length;i++){
-    var leaves=rows[i].querySelectorAll('*'); var subj=null; var gr=[];
-    for(var j=0;j<leaves.length;j++){
-      var el=leaves[j]; if(el.children.length>0) continue;
-      var t=(el.innerText||el.textContent||'').trim(); if(!t) continue;
-      var m=G.exec(t);
-      if(m){gr.push(m[1]);}
-      else if(M.test(t)){var p=t.split(/[\s,;]+/);for(var k=0;k<p.length;k++)gr.push(p[k]);}
-      else if(!subj && HAS.test(t) && t.length<70 && !/^\d/.test(t)){subj=t.split('\n')[0].trim();}
+    var cells=rows[i].children; if(cells.length<3) continue;
+    var rowText=(rows[i].innerText||'');
+    if(/средноаритметично/i.test(rowText)){var mm=/(\d[.,]\d+)/.exec(rowText); if(mm) avg=mm[1].replace(',','.'); continue;}
+    var first=(cells[0].innerText||'').trim();
+    if(!/^\d+$/.test(first)) continue;
+    var subj=(cells[1].innerText||'').trim().split('\n')[0].trim();
+    if(!subj||SKIPNAME.test(subj)) continue;
+    var gr=[];
+    for(var c=2;c<cells.length;c++){
+      if(heads.length>0){
+        var cr=cells[c].getBoundingClientRect(); var cx=(cr.left+cr.right)/2; var ok=false;
+        for(var h=0;h<heads.length;h++){ if(cx>=heads[h][0]&&cx<=heads[h][1]) ok=true; }
+        if(!ok) continue;
+      }
+      var toks=(cells[c].innerText||'').split(/[\s;]+/);
+      for(var k=0;k<toks.length;k++){ var t=toks[k].replace(/[,*]+$/,''); if(/^[2-6]$/.test(t)) gr.push(t); }
     }
-    if(subj&&gr.length>0&&!SKIP.test(subj)) out.push(subj+'\t'+gr.join(' '));
+    if(gr.length>0) out.push(subj+'\t'+gr.join(' '));
   }
   if(out.length==0){
     var lines=(document.body.innerText||'').split('\n');
     var R=/^(.*[A-Za-zА-Яа-я]{3,}.*?)[\s:–-]+((?:[2-6][\s,;]*)+)$/;
     for(var i=0;i<lines.length;i++){
       var m2=R.exec(lines[i].trim());
-      if(m2 && !SKIP.test(m2[1])) out.push(m2[1].trim()+'\t'+m2[2].trim().replace(/[,;]+/g,' '));
+      if(m2 && !SKIPNAME.test(m2[1].trim()) && !/средно|общ/i.test(m2[1])) out.push(m2[1].trim()+'\t'+m2[2].trim().replace(/[,;]+/g,' '));
     }
   }
+  if(avg) out.push('@avg\t'+avg);
   return out.join('\n');
 })()";
 
@@ -156,10 +170,12 @@ namespace GradeCalc
             {
                 string data = await GetScriptString(ExtractJs);
                 List<Subject> list = new List<Subject>();
+                string official = "";
                 foreach (string line in data.Split(new char[] { '\n' }, StringSplitOptions.RemoveEmptyEntries))
                 {
                     string[] parts = line.Split('\t');
                     if (parts.Length < 2) continue;
+                    if (parts[0] == "@avg") { official = parts[1].Trim(); continue; }
                     Subject s = new Subject(); s.Name = parts[0];
                     foreach (string t in parts[1].Split(' '))
                     {
@@ -173,25 +189,41 @@ namespace GradeCalc
                     MessageBox.Show(this, "Не намерих оценки на тази страница.\nОтвори страницата с оценките (не началната) и опитай пак.\nАко пак не стане, натисни „Запази текста“ и ми го покажи.", "Няма оценки");
                     return;
                 }
-                ShowPicker(list);
+                ShowPicker(list, official);
             }
             catch (Exception ex) { MessageBox.Show(this, ex.Message, "Грешка"); }
         }
 
-        void ShowPicker(List<Subject> list)
+        void ShowPicker(List<Subject> list, string official)
         {
             Form f = new Form();
             f.Text = "Намерени предмети";
             f.Font = Font;
             f.StartPosition = FormStartPosition.CenterParent;
-            f.Size = new Size(Theme.S(640), Theme.S(480));
-            f.MinimumSize = new Size(Theme.S(460), Theme.S(320));
+            f.Size = new Size(Theme.S(700), Theme.S(560));
+            f.MinimumSize = new Size(Theme.S(480), Theme.S(360));
+
+            int total = 0; double sum = 0;
+            foreach (Subject s in list) { total += s.Grades.Count; foreach (double g in s.Grades) sum += g; }
+            double avgAll = total == 0 ? 0 : sum / total;
+            string head = "Намерих " + total + " оценки в " + list.Count + " предмета, среден " + avgAll.ToString("0.00", CultureInfo.InvariantCulture) + ".";
+            if (official.Length > 0)
+            {
+                double o;
+                bool same = double.TryParse(official, NumberStyles.Float, CultureInfo.InvariantCulture, out o) && Math.Abs(o - avgAll) < 0.006;
+                head += same ? "  Школо показва " + official + " ✔ съвпада." : "  Школо показва " + official + " – не съвпада, провери списъка.";
+            }
+            Label hl = new Label();
+            hl.Text = head; hl.Dock = DockStyle.Top; hl.AutoSize = false; hl.Height = Theme.S(48);
+            hl.Padding = new Padding(Theme.S(10), Theme.S(10), Theme.S(10), 0);
+            hl.Font = Theme.Ui(10.5f, FontStyle.Bold);
 
             ListView lv = new ListView();
             lv.View = View.Details; lv.FullRowSelect = true; lv.MultiSelect = false; lv.HideSelection = false;
             lv.Dock = DockStyle.Fill;
-            lv.Columns.Add("Предмет", Theme.S(200));
-            lv.Columns.Add("Оценки", Theme.S(220));
+            lv.Columns.Add("Предмет", Theme.S(300));
+            lv.Columns.Add("Оценки", Theme.S(200));
+            lv.Columns.Add("Брой", Theme.S(50));
             lv.Columns.Add("Среден", Theme.S(70));
             foreach (Subject s in list)
             {
@@ -199,12 +231,14 @@ namespace GradeCalc
                 foreach (double g in s.Grades) gs.Add(GradeUtil.FmtGrade(g));
                 ListViewItem it = new ListViewItem(s.Name);
                 it.SubItems.Add(string.Join(" ", gs.ToArray()));
+                it.SubItems.Add(s.Grades.Count.ToString());
                 it.SubItems.Add(s.Avg.ToString("0.00", CultureInfo.InvariantCulture));
                 it.Tag = s;
                 lv.Items.Add(it);
             }
             if (lv.Items.Count > 0) lv.Items[0].Selected = true;
             f.Controls.Add(lv);
+            f.Controls.Add(hl);
 
             FlowLayoutPanel bp = new FlowLayoutPanel();
             bp.Dock = DockStyle.Bottom; bp.AutoSize = true; bp.Padding = new Padding(Theme.S(8));
