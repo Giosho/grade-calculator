@@ -277,7 +277,16 @@ namespace GradeCalc
             add.Click += delegate { AddSubject(); };
             Chip sh = new Chip(); sh.Text = "Вземи от Школо"; sh.Margin = new Padding(0);
             sh.Click += delegate { OpenShkolo(); };
-            fl.Controls.Add(add); fl.Controls.Add(sh);
+            Chip allCalc = new Chip(); allCalc.Text = "Всички оценки → калкулатор"; allCalc.Margin = new Padding(Theme.S(8), 0, 0, 0);
+            allCalc.Click += delegate
+            {
+                List<double> every = new List<double>();
+                foreach (SubStat s in GetStats()) every.AddRange(s.Grades);
+                if (every.Count == 0) { MessageBox.Show(this, "Още няма оценки в предметите.", "Няма оценки"); return; }
+                ApplyGrades(every);
+                ShowTab(0);
+            };
+            fl.Controls.Add(add); fl.Controls.Add(sh); fl.Controls.Add(allCalc);
             stack.Controls.Add(fl);
 
             foreach (SubjectData d in Store.Data.Subjects) AddRow(d);
@@ -613,7 +622,10 @@ namespace GradeCalc
                 double avg, cnt;
                 if (!GradeUtil.TryNum(tbAvg.Text, out avg) || !GradeUtil.TryNum(tbCount.Text, out cnt))
                 {
-                    SetMsg("Напиши оценките си горе или сегашния успех и броя оценки.", Theme.Pencil);
+                    if (tbAvg.Text.Trim().Length > 0)
+                        SetMsg("Успехът сам не стига: напиши и колко оценки имаш. От броя им зависи колко шестици трябват.", Theme.Pencil);
+                    else
+                        SetMsg("Напиши оценките си горе или сегашния успех и броя оценки.", Theme.Pencil);
                     return;
                 }
                 if (avg < 2 || avg > 6 || cnt < 1 || cnt != Math.Floor(cnt))

@@ -218,11 +218,12 @@ namespace GradeCalc
                 main.ApplyGrades(s.Grades);
                 f.Close(); Close();
             };
-            Button all = new Button(); all.Text = "Общ успех → калкулатор"; all.AutoSize = true;
+            Button all = new Button(); all.Text = "Всички оценки → калкулатор"; all.AutoSize = true;
             all.Click += delegate
             {
-                double sum = 0; foreach (Subject s in list) sum += s.Avg;
-                main.ApplyAverage(sum / list.Count, list.Count);
+                List<double> every = new List<double>();
+                foreach (Subject s in list) every.AddRange(s.Grades);
+                main.ApplyGrades(every);
                 f.Close(); Close();
             };
             bp.Controls.Add(saveAll); bp.Controls.Add(ok); bp.Controls.Add(all);
